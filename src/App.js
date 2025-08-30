@@ -13,6 +13,10 @@ const initialValues = [
   "Kebebasan",
   "Karier",
   "Petualangan",
+  "Pendidikan",
+  "Ketenangan",
+  "Persahabatan",
+  "Kreativitas",
 ];
 
 export default function ValuesAuctionGame() {
@@ -35,25 +39,32 @@ export default function ValuesAuctionGame() {
       name,
       age,
       balance: 100,
-      allocations: Object.fromEntries(initialValues.map((v) => [v, 0])),
+      allocations: {}, // kosong dulu, nanti diisi value yang dipilih
     };
     simpanPeserta(newPlayer);
     setName("");
     setAge("");
   };
 
-  // Alokasikan poin
+  // Alokasikan poin ke value
   const allocatePoints = () => {
     if (!selectedPlayer || points <= 0) return;
     const player = players.find((p) => p.id === selectedPlayer);
     if (!player || player.balance < points) return;
+
+    // Batas maksimal 5 value per peserta
+    const chosenValues = Object.keys(player.allocations);
+    if (!player.allocations[selectedValue] && chosenValues.length >= 5) {
+      alert("Maksimal hanya boleh memilih 5 value!");
+      return;
+    }
 
     const updated = {
       ...player,
       balance: player.balance - points,
       allocations: {
         ...player.allocations,
-        [selectedValue]: player.allocations[selectedValue] + points,
+        [selectedValue]: (player.allocations[selectedValue] || 0) + points,
       },
     };
 
@@ -93,9 +104,7 @@ export default function ValuesAuctionGame() {
             + Tambah
           </button>
         </div>
-        <p className="text-xs mt-2">
-          Setiap peserta otomatis mendapat 100 poin.
-        </p>
+        <p className="text-xs mt-2">Setiap peserta otomatis mendapat 100 poin.</p>
       </div>
 
       {/* Form Alokasi Poin */}
@@ -141,48 +150,54 @@ export default function ValuesAuctionGame() {
         </div>
       </div>
 
-      {/* Leaderboard */}
+      {/* Preview / Leaderboard */}
       <div className="p-4 border rounded-xl shadow-md overflow-x-auto">
-        <h2 className="text-xl font-bold mb-2">
-          Dashboard Alokasi (Leaderboard)
-        </h2>
-        <table className="table-auto border-collapse border w-full text-sm">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border p-2">Nama</th>
-              <th className="border p-2">Umur</th>
-              <th className="border p-2">Sisa</th>
-              {initialValues.map((v) => (
-                <th key={v} className="border p-2">
-                  {v}
-                </th>
-              ))}
-              <th className="border p-2">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {players.map((p) => (
-              <tr key={p.id}>
-                <td className="border p-2">{p.name}</td>
-                <td className="border p-2">{p.age}</td>
-                <td className="border p-2">{p.balance}</td>
-                {initialValues.map((v) => (
-                  <td key={v} className="border p-2">
-                    {p.allocations?.[v] || 0}
-                  </td>
-                ))}
-                <td className="border p-2 text-center">
-                  <button
-                    onClick={() => deletePlayer(p.id)}
-                    className="bg-red-500 text-white px-2 py-1 rounded"
-                  >
-                    Hapus
-                  </button>
-                </td>
+        <h2 className="text-xl font-bold mb-2">Preview Alokasi Peserta</h2>
+        {players.length === 0 ? (
+          <p className="text-sm text-gray-500">Belum ada peserta.</p>
+        ) : (
+          <table className="table-auto border-collapse border w-full text-sm">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="border p-2">Nama</th>
+                <th className="border p-2">Umur</th>
+                <th className="border p-2">Sisa Koin</th>
+                <th className="border p-2">Pilihan (max 5)</th>
+                <th className="border p-2">Aksi</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {players.map((p) => (
+                <tr key={p.id}>
+                  <td className="border p-2">{p.name}</td>
+                  <td className="border p-2">{p.age}</td>
+                  <td className="border p-2">{p.balance}</td>
+                  <td className="border p-2">
+                    {Object.keys(p.allocations).length === 0 ? (
+                      <span className="text-gray-400">Belum ada</span>
+                    ) : (
+                      <ul className="list-disc list-inside space-y-1">
+                        {Object.entries(p.allocations).map(([val, pts]) => (
+                          <li key={val}>
+                            {val} → <b>{pts} poin</b>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
+                  <td className="border p-2 text-center">
+                    <button
+                      onClick={() => deletePlayer(p.id)}
+                      className="bg-red-500 text-white px-2 py-1 rounded"
+                    >
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
