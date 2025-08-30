@@ -1,10 +1,12 @@
-import { ref, set, onValue, update, remove } from "firebase/database";
+import { ref, set, onValue, update, remove, push } from "firebase/database";
 import { db } from "./firebase";
 
-// Simpan peserta baru (id manual)
+// Simpan peserta baru (id auto dari Firebase)
 export const simpanPeserta = (data) => {
-  const pesertaRef = ref(db, `peserta/${data.id}`);
-  return set(pesertaRef, data);
+  const pesertaRef = push(ref(db, "peserta")); // bikin id unik otomatis
+  const id = pesertaRef.key;
+  set(pesertaRef, { ...data, id }); // simpan dengan id
+  return id; // balikin id ke frontend
 };
 
 // Ambil semua peserta realtime
