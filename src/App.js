@@ -29,8 +29,16 @@ export default function ValuesAuctionGame() {
 
   // Ambil data realtime dari Firebase
   useEffect(() => {
-    ambilPeserta((list) => setPlayers(list));
-  }, []);
+    ambilPeserta((list) => {
+      setPlayers(list);
+
+      // kalau ada selectedPlayer, sinkronkan dengan data terbaru
+      if (selectedPlayer) {
+        const fresh = list.find((p) => p.id === selectedPlayer.id);
+        if (fresh) setSelectedPlayer(fresh);
+      }
+    });
+  }, [selectedPlayer]);
 
   // Tambah peserta baru
   const addPlayer = () => {
@@ -45,7 +53,7 @@ export default function ValuesAuctionGame() {
       simpanPeserta(newPlayer);
       setName("");
       setAge("");
-      setSelectedPlayer(newPlayer); // 🔥 langsung pilih dirinya sendiri
+      setSelectedPlayer(newPlayer); // langsung pilih dirinya sendiri
     }
   };
 
@@ -63,8 +71,7 @@ export default function ValuesAuctionGame() {
         },
       };
       updatePeserta(updated);
-      setSelectedPlayer(updated);
-      setPoints(0);
+      setPoints(0); // reset input
     }
   };
 
@@ -73,14 +80,15 @@ export default function ValuesAuctionGame() {
     if (!selectedPlayer || !selectedPlayer.bids[value]) return;
 
     const refundedPoints = selectedPlayer.bids[value];
+
     const updated = {
       ...selectedPlayer,
       coins: selectedPlayer.coins + refundedPoints, // balikin koin
+      bids: { ...selectedPlayer.bids }, // copy object
     };
     delete updated.bids[value]; // hapus taruhannya
 
     updatePeserta(updated);
-    setSelectedPlayer(updated);
 
     // otomatis set input form biar bisa pindahin lagi
     setSelectedValue(value);
@@ -111,7 +119,9 @@ export default function ValuesAuctionGame() {
       {/* Kalau sudah ada peserta terpilih */}
       {selectedPlayer && (
         <div style={{ marginTop: "20px" }}>
-          <h2>Pemain: {selectedPlayer.name} ({selectedPlayer.coins} koin tersisa)</h2>
+          <h2>
+            Pemain: {selectedPlayer.name} ({selectedPlayer.coins} koin tersisa)
+          </h2>
 
           {/* Taruh koin */}
           <select
@@ -128,7 +138,9 @@ export default function ValuesAuctionGame() {
             type="number"
             placeholder="Jumlah koin"
             value={points}
-            onChange={(e) => setPoints(parseInt(e.target.value))}
+            onChange={(e) =>
+              setPoints(e.target.value ? parseInt(e.target.value) : 0)
+            }
           />
           <button onClick={placeBid}>Taruh Koin</button>
 
