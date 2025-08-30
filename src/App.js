@@ -1,133 +1,108 @@
-import React, { useState } from "react";
+// App.js
+import React, { useState, useEffect } from "react";
+import { db } from "./firebase";
+import { collection, addDoc, onSnapshot, doc, updateDoc } from "firebase/firestore";
 
 function App() {
   const [players, setPlayers] = useState([]);
   const [name, setName] = useState("");
-  const [age, setAge] = useState("");
+  const [coins, setCoins] = useState(100);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [selectedValue, setSelectedValue] = useState("Keluarga");
   const [point, setPoint] = useState(0);
+  const [selectedValue, setSelectedValue] = useState("value1");
 
-  const values = ["Keluarga", "Kesehatan", "Uang", "Kebebasan", "Karier", "Petualangan", "Kreativitas"];
-
-  // Tambah pemain baru
-  const addPlayer = () => {
-    if (!name || !age) return;
-    const newPlayer = {
-      id: Date.now(),
+  // 🔹 Tambah pemain baru
+  const addPlayer = async () => {
+    if (!name) return;
+    await addDoc(collection(db, "players"), {
       name,
-      age,
-      coins: 100,
-      allocations: values.reduce((acc, v) => ({ ...acc, [v]: 0 }), {}),
-    };
-    setPlayers([...players, newPlayer]);
+      coins,
+      allocations: { value1: 0, value2: 0, value3: 0 }
+    });
     setName("");
-    setAge("");
   };
 
-  // Alokasi poin
-  const allocatePoints = () => {
+  // 🔹 Alokasikan poin
+  const allocatePoints = async () => {
     if (!selectedPlayer || point <= 0) return;
-    setPlayers(players.map(p => {
-      if (p.id === selectedPlayer) {
-        if (p.coins >= point) {
-          return {
-            ...p,
-            coins: p.coins - point,
-            allocations: {
-              ...p.allocations,
-              [selectedValue]: p.allocations[selectedValue] + point
-            }
-          };
-        }
-      }
-      return p;
-    }));
-    setPoint(0);
+
+    const playerRef = doc(db, "players", selectedPlayer);
+    const player = players.find(p => p.id === selectedPlayer);
+    if (!player || player.coins < point) return;
+
+    const updatedData = {
+      coins: player.coins - point,
+      allocations: {
+        ...player.allocations,
+        [selectedValue]: player.allocations[selectedValue] + point,
+      },
+    };
+
+    try {
+      await updateDoc(playerRef, updatedData);
+      setPoint(0);
+    } catch (e) {
+      console.error("Error updating allocation: ", e);
+    }
   };
+
+  // 🔹 Ambil data realtime dari Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "players"), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPlayers(list);
+    });
+
+    return () => unsub(); // cleanup listener pas komponen unmount
+  }, []);
 
   return (
-    <div className="p-6">
-      <h1>🎯 Life & Career Game</h1>
+    <div>
+      <h1>Values Auction</h1>
 
-      {/* Tambah Pemain */}
-      <div>
-        <h2>Tambah Pemain</h2>
-        <input 
-          placeholder="Nama" 
-          value={name} 
-          onChange={e => setName(e.target.value)} 
-        />
-        <input 
-          placeholder="Umur" 
-          value={age} 
-          onChange={e => setAge(e.target.value)} 
-        />
-        <button onClick={addPlayer}>+ Tambah Pemain</button>
-        <p>Setiap peserta otomatis dapat 100 poin.</p>
-      </div>
+      {/* Tambah Player */}
+      <input
+        value={name}
+        onChange={e => setName(e.target.value)}
+        placeholder="Nama player"
+      />
+      <button onClick={addPlayer}>Tambah Player</button>
 
-      {/* Alokasikan poin */}
-      <div style={{ marginTop: 20 }}>
-        <h2>Alokasikan Poin</h2>
-        <select 
-          value={selectedPlayer || ""} 
-          onChange={e => setSelectedPlayer(Number(e.target.value))}
-        >
-          <option value="">Pilih Peserta</option>
-          {players.map(p => (
-            <option key={p.id} value={p.id}>
-              {p.name} (Sisa: {p.coins})
-            </option>
-          ))}
-        </select>
+      {/* List Player */}
+      <h2>Daftar Player</h2>
+      <ul>
+        {players.map(p => (
+          <li key={p.id}>
+            {p.name} - Coins: {p.coins}
+          </li>
+        ))}
+      </ul>
 
-        <select 
-          value={selectedValue} 
-          onChange={e => setSelectedValue(e.target.value)}
-        >
-          {values.map(v => (
-            <option key={v} value={v}>{v}</option>
-          ))}
-        </select>
+      {/* Alokasikan Poin */}
+      <h2>Alokasikan Poin</h2>
+      <select onChange={e => setSelectedPlayer(e.target.value)}>
+        <option value="">Pilih Player</option>
+        {players.map(p => (
+          <option key={p.id} value={p.id}>{p.name}</option>
+        ))}
+      </select>
 
-        <input 
-          type="number" 
-          placeholder="Poin" 
-          value={point} 
-          onChange={e => setPoint(Number(e.target.value))}
-        />
-        <button onClick={allocatePoints}>Alokasikan</button>
-      </div>
+      <select onChange={e => setSelectedValue(e.target.value)}>
+        <option value="value1">Value 1</option>
+        <option value="value2">Value 2</option>
+        <option value="value3">Value 3</option>
+      </select>
 
-      {/* Dashboard */}
-      <div style={{ marginTop: 20 }}>
-        <h2>Dashboard Alokasi</h2>
-        <table border="1" cellPadding="5">
-          <thead>
-            <tr>
-              <th>Nama</th>
-              <th>Umur</th>
-              <th>Sisa Poin</th>
-              {values.map(v => (
-                <th key={v}>{v}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {players.map(p => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td>{p.age}</td>
-                <td>{p.coins}</td>
-                {values.map(v => (
-                  <td key={v}>{p.allocations[v]}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <input
+        type="number"
+        value={point}
+        onChange={e => setPoint(Number(e.target.value))}
+        placeholder="Jumlah poin"
+      />
+      <button onClick={allocatePoints}>Alokasikan</button>
     </div>
   );
 }
