@@ -39,7 +39,7 @@ export default function ValuesAuctionGame() {
       name,
       age,
       balance: 100,
-      allocations: {}, // kosong dulu, nanti diisi value yang dipilih
+      allocations: {}, // default kosong biar aman
     };
     simpanPeserta(newPlayer);
     setName("");
@@ -52,9 +52,11 @@ export default function ValuesAuctionGame() {
     const player = players.find((p) => p.id === selectedPlayer);
     if (!player || player.balance < points) return;
 
+    const currentAlloc = player.allocations || {};
+    const chosenValues = Object.keys(currentAlloc);
+
     // Batas maksimal 5 value per peserta
-    const chosenValues = Object.keys(player.allocations);
-    if (!player.allocations[selectedValue] && chosenValues.length >= 5) {
+    if (!currentAlloc[selectedValue] && chosenValues.length >= 5) {
       alert("Maksimal hanya boleh memilih 5 value!");
       return;
     }
@@ -63,8 +65,8 @@ export default function ValuesAuctionGame() {
       ...player,
       balance: player.balance - points,
       allocations: {
-        ...player.allocations,
-        [selectedValue]: (player.allocations[selectedValue] || 0) + points,
+        ...currentAlloc,
+        [selectedValue]: (currentAlloc[selectedValue] || 0) + points,
       },
     };
 
@@ -104,7 +106,9 @@ export default function ValuesAuctionGame() {
             + Tambah
           </button>
         </div>
-        <p className="text-xs mt-2">Setiap peserta otomatis mendapat 100 poin.</p>
+        <p className="text-xs mt-2">
+          Setiap peserta otomatis mendapat 100 poin.
+        </p>
       </div>
 
       {/* Form Alokasi Poin */}
@@ -173,7 +177,7 @@ export default function ValuesAuctionGame() {
                   <td className="border p-2">{p.age}</td>
                   <td className="border p-2">{p.balance}</td>
                   <td className="border p-2">
-                    {Object.keys(p.allocations).length === 0 ? (
+                    {!p.allocations || Object.keys(p.allocations).length === 0 ? (
                       <span className="text-gray-400">Belum ada</span>
                     ) : (
                       <ul className="list-disc list-inside space-y-1">
