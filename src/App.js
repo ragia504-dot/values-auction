@@ -3,7 +3,6 @@ import {
   simpanPeserta,
   ambilPeserta,
   updatePeserta,
-  hapusPeserta,
 } from "./db";
 
 const initialValues = [
@@ -23,22 +22,17 @@ export default function ValuesAuctionGame() {
   const [players, setPlayers] = useState([]);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [selectedValue, setSelectedValue] = useState(initialValues[0]);
   const [points, setPoints] = useState(0);
 
   // Ambil data realtime dari Firebase
   useEffect(() => {
-    ambilPeserta((list) => {
-      setPlayers(list);
+    ambilPeserta((list) => setPlayers(list));
+  }, []);
 
-      // kalau ada selectedPlayer, sinkronkan dengan data terbaru
-      if (selectedPlayer) {
-        const fresh = list.find((p) => p.id === selectedPlayer.id);
-        if (fresh) setSelectedPlayer(fresh);
-      }
-    });
-  }, [selectedPlayer]);
+  // Cari player yang sedang dipilih
+  const selectedPlayer = players.find((p) => p.id === selectedPlayerId) || null;
 
   // Tambah peserta baru
   const addPlayer = () => {
@@ -53,7 +47,7 @@ export default function ValuesAuctionGame() {
       simpanPeserta(newPlayer);
       setName("");
       setAge("");
-      setSelectedPlayer(newPlayer); // langsung pilih dirinya sendiri
+      setSelectedPlayerId(newPlayer.id); // langsung pilih dirinya sendiri
     }
   };
 
@@ -67,7 +61,7 @@ export default function ValuesAuctionGame() {
         coins: selectedPlayer.coins - points,
         bids: {
           ...selectedPlayer.bids,
-          [selectedValue]: (selectedPlayer.bids[selectedValue] || 0) + points,
+          [selectedValue]: (selectedPlayer.bids?.[selectedValue] || 0) + points,
         },
       };
       updatePeserta(updated);
@@ -75,22 +69,22 @@ export default function ValuesAuctionGame() {
     }
   };
 
-  // Edit/mindahin koin (balikin dulu, baru taruh lagi)
+  // Edit/mindahin koin
   const editBid = (value) => {
     if (!selectedPlayer || !selectedPlayer.bids[value]) return;
 
     const refundedPoints = selectedPlayer.bids[value];
-
     const updated = {
       ...selectedPlayer,
-      coins: selectedPlayer.coins + refundedPoints, // balikin koin
-      bids: { ...selectedPlayer.bids }, // copy object
+      coins: selectedPlayer.coins + refundedPoints,
     };
-    delete updated.bids[value]; // hapus taruhannya
+    const newBids = { ...updated.bids };
+    delete newBids[value];
+    updated.bids = newBids;
 
     updatePeserta(updated);
 
-    // otomatis set input form biar bisa pindahin lagi
+    // set ulang input supaya bisa taruh lagi
     setSelectedValue(value);
     setPoints(refundedPoints);
   };
@@ -138,14 +132,12 @@ export default function ValuesAuctionGame() {
             type="number"
             placeholder="Jumlah koin"
             value={points}
-            onChange={(e) =>
-              setPoints(e.target.value ? parseInt(e.target.value) : 0)
-            }
+            onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
           />
           <button onClick={placeBid}>Taruh Koin</button>
 
           {/* Daftar taruhannya */}
-          <h3>Taruhan:</h3>
+          <h3>Taruhan Kamu:</h3>
           <ul>
             {Object.entries(selectedPlayer.bids || {}).map(([val, pts]) => (
               <li key={val}>
@@ -162,7 +154,14 @@ export default function ValuesAuctionGame() {
       <ul>
         {players.map((p) => (
           <li key={p.id}>
-            {p.name} ({p.age} th) - {p.coins} koin
+            <strong>{p.name}</strong> ({p.age} th) - {p.coins} koin
+            <ul>
+              {Object.entries(p.bids || {}).map(([val, pts]) => (
+                <li key={val}>
+                  {val} : {pts} koin
+                </li>
+              ))}
+            </ul>
           </li>
         ))}
       </ul>
