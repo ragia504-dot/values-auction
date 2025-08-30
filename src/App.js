@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { simpanPeserta, ambilPeserta, updatePeserta, hapusPeserta } from "./db";
 
+
+
 export default function ValuesAuctionGame() {
   const [players, setPlayers] = useState([]);
   const [name, setName] = useState("");
@@ -11,25 +13,35 @@ export default function ValuesAuctionGame() {
 
   const values = ["Keluarga", "Kesehatan", "Uang", "Kebebasan", "Karier", "Petualangan", "Kreativitas"];
 
+  useEffect(() => {
+  setPlayers([
+    { id: "1", name: "Test", age: 20, coins: 100, allocations: values.reduce((acc,v)=>({...acc,[v]:0}),{}) }
+  ]);
+}, []);
+
+
   // Ambil data realtime
   useEffect(() => {
     ambilPeserta((list) => setPlayers(list));
   }, []);
 
   // Tambah pemain
-  const addPlayer = () => {
-    if (!name || !age) return;
-    const newPlayer = {
-      id: Date.now(),
-      name,
-      age,
-      coins: 100,
-      allocations: values.reduce((acc, v) => ({ ...acc, [v]: 0 }), {}),
-    };
-    setPlayers([...players, newPlayer]);
-    setName("");
-    setAge("");
+const addPlayer = () => {
+  if (!name || !age) return;
+  const newPlayer = {
+    name,
+    age,
+    coins: 100,
+    allocations: values.reduce((acc, v) => ({ ...acc, [v]: 0 }), {}),
   };
+  simpanPeserta(newPlayer)
+    .then(() => {
+      setName("");
+      setAge("");
+    })
+    .catch(err => console.error(err));
+};
+
 
   // Alokasi poin
   const allocatePoints = () => {
@@ -87,15 +99,15 @@ export default function ValuesAuctionGame() {
       <div className="p-4 rounded-2xl shadow bg-white">
         <h2 className="text-xl font-bold mb-2">Alokasikan Poin</h2>
         <select 
-          className="border p-2 rounded mr-2"
-          value={selectedPlayer || ""}
-          onChange={e => setSelectedPlayer(Number(e.target.value))}
+          value={selectedPlayer || ""} 
+          onChange={e => setSelectedPlayer(e.target.value)}
         >
           <option value="">Pilih Peserta</option>
           {players.map(p => (
             <option key={p.id} value={p.id}>{p.name} (Sisa: {p.coins})</option>
           ))}
         </select>
+
 
         <select 
           className="border p-2 rounded mr-2"
