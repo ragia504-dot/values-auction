@@ -1,51 +1,78 @@
 // App.js
 import React, { useState, useEffect } from "react";
-import { simpanPeserta, ambilPeserta } from "./db";
+import { db } from "./firebase"; // pastikan ini sudah import Realtime DB
+import { ref, set, onValue, update } from "firebase/database";
 
 function App() {
-  const [nama, setNama] = useState("");
-  const [email, setEmail] = useState("");
-  const [peserta, setPeserta] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [name, setName] = useState("");
+  const [coins, setCoins] = useState(100);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+
+  const playersRef = ref(db, "players");
 
   // Ambil data realtime
   useEffect(() => {
-    ambilPeserta((list) => {
-      setPeserta(list);
+    const unsubscribe = onValue(playersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const parsedPlayers = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setPlayers(parsedPlayers);
+      } else {
+        setPlayers([]);
+      }
     });
+
+    return () => unsubscribe(); // cleanup listener
   }, []);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!nama || !email) return alert("Isi semua field!");
-    simpanPeserta({ nama, email });
-    setNama("");
-    setEmail("");
+  // Tambah player
+  const addPlayer = () => {
+    if (!name) return;
+    const newPlayerRef = ref(db, `players/${Date.now()}`); // id unik
+    set(newPlayerRef, { name, coins })
+      .then(() => {
+        setName("");
+        setCoins(100);
+      })
+      .catch((error) => console.error(error));
+  };
+
+  // Update coins player
+  const updateCoins = (id, newCoins) => {
+    const playerRef = ref(db, `players/${id}`);
+    update(playerRef, { coins: newCoins }).catch((err) => console.error(err));
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Form Pendaftaran Peserta</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Nama"
-          value={nama}
-          onChange={(e) => setNama(e.target.value)}
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <button type="submit">Daftar</button>
-      </form>
+    <div style={{ padding: 20 }}>
+      <h1>Realtime Player App</h1>
+      <input
+        placeholder="Nama Player"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <input
+        type="number"
+        placeholder="Coins"
+        value={coins}
+        onChange={(e) => setCoins(Number(e.target.value))}
+      />
+      <button onClick={addPlayer}>Add Player</button>
 
-      <h3>Daftar Peserta</h3>
       <ul>
-        {peserta.map((p) => (
-          <li key={p.id}>
-            {p.nama} - {p.email}
+        {players.map((player) => (
+          <li key={player.id}>
+            {player.name} - {player.coins} coins
+            <button onClick={() => updateCoins(player.id, player.coins + 10)}>
+              +10
+            </button>
+            <button onClick={() => updateCoins(player.id, player.coins - 10)}>
+              -10
+            </button>
           </li>
         ))}
       </ul>

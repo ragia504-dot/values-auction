@@ -1,5 +1,5 @@
 // db.js
-import { ref, push, onValue } from "firebase/database";
+import { ref, push, onValue, update, remove } from "firebase/database";
 import { db } from "./firebase";
 
 // Simpan peserta baru
@@ -21,4 +21,16 @@ export const ambilPeserta = (callback) => {
       : [];
     callback(list);
   });
+};
+
+// Update peserta
+export const updatePeserta = (id, data) => {
+  const pesertaRef = ref(db, `peserta/${id}`);
+  return update(pesertaRef, data);
+};
+
+// Hapus peserta
+export const hapusPeserta = (id) => {
+  const pesertaRef = ref(db, `peserta/${id}`);
+  return remove(pesertaRef);
 };
