@@ -1,14 +1,13 @@
-// db.js
-import { ref, push, onValue, update, remove } from "firebase/database";
+import { ref, set, onValue, update, remove } from "firebase/database";
 import { db } from "./firebase";
 
-// Simpan peserta baru
+// Simpan peserta baru (id manual)
 export const simpanPeserta = (data) => {
-  const pesertaRef = ref(db, "peserta");
-  return push(pesertaRef, data);
+  const pesertaRef = ref(db, `peserta/${data.id}`);
+  return set(pesertaRef, data);
 };
 
-// Ambil data peserta realtime
+// Ambil semua peserta realtime
 export const ambilPeserta = (callback) => {
   const pesertaRef = ref(db, "peserta");
   onValue(pesertaRef, (snapshot) => {

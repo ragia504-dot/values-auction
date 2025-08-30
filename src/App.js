@@ -1,170 +1,165 @@
-import { useEffect, useState } from "react";
-import {
-  simpanPeserta,
-  ambilPeserta,
-  updatePeserta,
-} from "./db";
+// App.js
+import React, { useState, useEffect } from "react";
+import { simpanPeserta, ambilPeserta } from "./db";
 
-const initialValues = [
-  "Keluarga",
-  "Kesehatan",
-  "Uang",
-  "Kebebasan",
-  "Karier",
-  "Petualangan",
-  "Pendidikan",
-  "Ketenangan",
-  "Persahabatan",
+const daftarNilai = [
+  "Kejujuran",
+  "Kerja Keras",
   "Kreativitas",
+  "Tanggung Jawab",
+  "Disiplin",
+  "Kerjasama",
+  "Empati",
+  "Keadilan",
+  "Keberanian",
+  "Kebijaksanaan",
 ];
 
-export default function ValuesAuctionGame() {
-  const [players, setPlayers] = useState([]);
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
-  const [selectedValue, setSelectedValue] = useState(initialValues[0]);
-  const [points, setPoints] = useState(0);
+function App() {
+  const [peserta, setPeserta] = useState([]);
+  const [nama, setNama] = useState("");
+  const [umur, setUmur] = useState("");
+  const [pilihan, setPilihan] = useState({});
+  const [totalKoin, setTotalKoin] = useState(100);
 
-  // Ambil data realtime dari Firebase
   useEffect(() => {
-    ambilPeserta((list) => setPlayers(list));
+    ambilPeserta((data) => setPeserta(data));
   }, []);
 
-  // Cari player yang sedang dipilih
-  const selectedPlayer = players.find((p) => p.id === selectedPlayerId) || null;
-
-  // Tambah peserta baru
-  const addPlayer = () => {
-    if (name && age) {
-      const newPlayer = {
-        id: Date.now().toString(),
-        name,
-        age,
-        coins: 100,
-        bids: {},
-      };
-      simpanPeserta(newPlayer);
-      setName("");
-      setAge("");
-      setSelectedPlayerId(newPlayer.id); // langsung pilih dirinya sendiri
+  // Toggle pilih nilai
+  const pilihNilai = (nilai) => {
+    const sudahDipilih = Object.keys(pilihan);
+    if (pilihan[nilai]) {
+      // kalau klik lagi → hapus nilai
+      const copy = { ...pilihan };
+      setTotalKoin(totalKoin + copy[nilai]);
+      delete copy[nilai];
+      setPilihan(copy);
+    } else {
+      if (sudahDipilih.length >= 5) {
+        alert("Hanya boleh pilih maksimal 5 nilai!");
+        return;
+      }
+      setPilihan({ ...pilihan, [nilai]: 0 });
     }
   };
 
-  // Taruh koin ke nilai
-  const placeBid = () => {
-    if (!selectedPlayer) return;
-
-    if (points > 0 && points <= selectedPlayer.coins) {
-      const updated = {
-        ...selectedPlayer,
-        coins: selectedPlayer.coins - points,
-        bids: {
-          ...selectedPlayer.bids,
-          [selectedValue]: (selectedPlayer.bids?.[selectedValue] || 0) + points,
-        },
-      };
-      updatePeserta(updated);
-      setPoints(0); // reset input
+  // Atur jumlah koin untuk nilai tertentu
+  const aturKoin = (nilai, jumlah) => {
+    jumlah = parseInt(jumlah) || 0;
+    const sisaKoin = 100 - (Object.values(pilihan).reduce((a, b) => a + b, 0) - (pilihan[nilai] || 0));
+    if (jumlah > sisaKoin) {
+      alert("Koin tidak cukup");
+      return;
     }
+    setPilihan({ ...pilihan, [nilai]: jumlah });
+    setTotalKoin(100 - (Object.values({ ...pilihan, [nilai]: jumlah }).reduce((a, b) => a + b, 0)));
   };
 
-  // Edit/mindahin koin
-  const editBid = (value) => {
-    if (!selectedPlayer || !selectedPlayer.bids[value]) return;
+  const tambahPeserta = () => {
+    if (!nama || !umur) {
+      alert("Isi nama dan umur dulu");
+      return;
+    }
+    if (Object.keys(pilihan).length !== 5) {
+      alert("Harus pilih tepat 5 nilai!");
+      return;
+    }
+    if (totalKoin !== 0) {
+      alert("Semua 100 koin harus dihabiskan");
+      return;
+    }
 
-    const refundedPoints = selectedPlayer.bids[value];
-    const updated = {
-      ...selectedPlayer,
-      coins: selectedPlayer.coins + refundedPoints,
-    };
-    const newBids = { ...updated.bids };
-    delete newBids[value];
-    updated.bids = newBids;
+    simpanPeserta({
+      nama,
+      umur,
+      pilihan,
+    });
 
-    updatePeserta(updated);
-
-    // set ulang input supaya bisa taruh lagi
-    setSelectedValue(value);
-    setPoints(refundedPoints);
+    setNama("");
+    setUmur("");
+    setPilihan({});
+    setTotalKoin(100);
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>🎯 Values Auction Game</h1>
+    <div className="p-6">
+      <h1 className="text-xl font-bold mb-4">Values Auction</h1>
 
-      {/* Tambah pemain */}
-      <div>
+      {/* Form Tambah Peserta */}
+      <div className="mb-6 p-4 border rounded">
+        <h2 className="font-semibold mb-2">Tambah Peserta</h2>
         <input
           type="text"
           placeholder="Nama"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={nama}
+          onChange={(e) => setNama(e.target.value)}
+          className="border p-2 mr-2"
         />
         <input
           type="number"
           placeholder="Umur"
-          value={age}
-          onChange={(e) => setAge(e.target.value)}
+          value={umur}
+          onChange={(e) => setUmur(e.target.value)}
+          className="border p-2 mr-2"
         />
-        <button onClick={addPlayer}>+ Tambah Peserta</button>
+
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          {daftarNilai.map((n) => (
+            <div key={n} className="flex items-center">
+              <input
+                type="checkbox"
+                checked={pilihan[n] !== undefined}
+                onChange={() => pilihNilai(n)}
+                className="mr-2"
+              />
+              <label className="w-32">{n}</label>
+              {pilihan[n] !== undefined && (
+                <input
+                  type="number"
+                  min="0"
+                  value={pilihan[n]}
+                  onChange={(e) => aturKoin(n, e.target.value)}
+                  className="border p-1 w-20"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-2">
+          Sisa koin: <b>{totalKoin}</b> / 100
+        </p>
+
+        <button
+          onClick={tambahPeserta}
+          className="bg-blue-500 text-white px-4 py-2 mt-3 rounded"
+        >
+          Simpan
+        </button>
       </div>
 
-      {/* Kalau sudah ada peserta terpilih */}
-      {selectedPlayer && (
-        <div style={{ marginTop: "20px" }}>
-          <h2>
-            Pemain: {selectedPlayer.name} ({selectedPlayer.coins} koin tersisa)
-          </h2>
-
-          {/* Taruh koin */}
-          <select
-            value={selectedValue}
-            onChange={(e) => setSelectedValue(e.target.value)}
-          >
-            {initialValues.map((val) => (
-              <option key={val} value={val}>
-                {val}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            placeholder="Jumlah koin"
-            value={points}
-            onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
-          />
-          <button onClick={placeBid}>Taruh Koin</button>
-
-          {/* Daftar taruhannya */}
-          <h3>Taruhan Kamu:</h3>
-          <ul>
-            {Object.entries(selectedPlayer.bids || {}).map(([val, pts]) => (
-              <li key={val}>
-                {val} : {pts} koin{" "}
-                <button onClick={() => editBid(val)}>✏️ Edit</button>
-              </li>
-            ))}
+      {/* Daftar Peserta */}
+      <h2 className="font-semibold mb-2">Daftar Peserta</h2>
+      {peserta.map((p) => (
+        <div key={p.id} className="border p-3 mb-2 rounded">
+          <p>
+            <b>{p.nama}</b> (Umur: {p.umur})
+          </p>
+          <ul className="ml-4">
+            {Object.entries(p.pilihan || {}).map(
+              ([nilai, jumlah]) =>
+                jumlah > 0 && (
+                  <li key={nilai}>
+                    {nilai}: {jumlah}
+                  </li>
+                )
+            )}
           </ul>
         </div>
-      )}
-
-      {/* Daftar semua pemain */}
-      <h2>👥 Semua Peserta</h2>
-      <ul>
-        {players.map((p) => (
-          <li key={p.id}>
-            <strong>{p.name}</strong> ({p.age} th) - {p.coins} koin
-            <ul>
-              {Object.entries(p.bids || {}).map(([val, pts]) => (
-                <li key={val}>
-                  {val} : {pts} koin
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
+      ))}
     </div>
   );
 }
+
+export default App;
