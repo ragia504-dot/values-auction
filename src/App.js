@@ -28,7 +28,7 @@ export default function ValuesAuctionGame() {
     ambilPeserta((list) => setPlayers(list));
   }, []);
 
-  // Tambah peserta ke Firebase
+  // Tambah peserta
   const addPlayer = () => {
     if (!name || !age) return;
     const newPlayer = {
@@ -42,7 +42,7 @@ export default function ValuesAuctionGame() {
     setAge("");
   };
 
-  // Alokasikan poin (update ke Firebase)
+  // Alokasikan poin
   const allocatePoints = () => {
     if (!selectedPlayer || points <= 0) return;
     const player = players.find((p) => p.id === selectedPlayer);
@@ -68,20 +68,20 @@ export default function ValuesAuctionGame() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Tambah Peserta */}
+      {/* Form Tambah Peserta */}
       <div className="p-4 border rounded-xl shadow-md">
         <h2 className="text-xl font-bold mb-2">Tambah Peserta</h2>
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Nama"
+            placeholder="cth: Adit"
             className="border p-2 rounded w-1/3"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <input
             type="number"
-            placeholder="Umur"
+            placeholder="cth: 21"
             className="border p-2 rounded w-1/4"
             value={age}
             onChange={(e) => setAge(e.target.value)}
@@ -98,7 +98,7 @@ export default function ValuesAuctionGame() {
         </p>
       </div>
 
-      {/* Alokasikan */}
+      {/* Form Alokasi Poin */}
       <div className="p-4 border rounded-xl shadow-md">
         <h2 className="text-xl font-bold mb-2">Alokasikan Poin</h2>
         <div className="flex gap-2 items-center">
@@ -168,7 +168,7 @@ export default function ValuesAuctionGame() {
                 <td className="border p-2">{p.balance}</td>
                 {initialValues.map((v) => (
                   <td key={v} className="border p-2">
-                    {p.allocations[v]}
+                    {p.allocations?.[v] || 0}
                   </td>
                 ))}
                 <td className="border p-2 text-center">
