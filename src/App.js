@@ -6,76 +6,98 @@ import { ref, set, onValue, update } from "firebase/database";
 function App() {
   const [players, setPlayers] = useState([]);
   const [name, setName] = useState("");
-  const [coins, setCoins] = useState(100);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [age, setAge] = useState("");
+  const [item, setItem] = useState("");
+  const [points, setPoints] = useState(100);
 
-  const playersRef = ref(db, "players");
-
-  // Ambil data realtime
-  useEffect(() => {
-    const unsubscribe = onValue(playersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const parsedPlayers = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
-        }));
-        setPlayers(parsedPlayers);
-      } else {
-        setPlayers([]);
-      }
-    });
-
-    return () => unsubscribe(); // cleanup listener
-  }, []);
-
-  // Tambah player
+  // Tambah pemain baru
   const addPlayer = () => {
-    if (!name) return;
-    const newPlayerRef = ref(db, `players/${Date.now()}`); // id unik
-    set(newPlayerRef, { name, coins })
-      .then(() => {
-        setName("");
-        setCoins(100);
-      })
-      .catch((error) => console.error(error));
+    if (!name || !age) return;
+    const newPlayer = {
+      id: Date.now(),
+      name,
+      age,
+      points: 100,
+      purchases: []
+    };
+    setPlayers([...players, newPlayer]);
+    setName("");
+    setAge("");
   };
 
-  // Update coins player
-  const updateCoins = (id, newCoins) => {
-    const playerRef = ref(db, `players/${id}`);
-    update(playerRef, { coins: newCoins }).catch((err) => console.error(err));
+  // Beli item
+  const buyItem = (id) => {
+    if (!item) return;
+
+    setPlayers(
+      players.map((p) => {
+        if (p.id === id) {
+          if (p.points >= points) {
+            return {
+              ...p,
+              points: p.points - points,
+              purchases: [...p.purchases, { item, cost: points }]
+            };
+          } else {
+            alert("Poin tidak cukup!");
+          }
+        }
+        return p;
+      })
+    );
+    setItem("");
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Realtime Player App</h1>
+    <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
+      <h1>🎯 Life & Career Game</h1>
+
+      <h2>Tambah Pemain</h2>
       <input
-        placeholder="Nama Player"
+        type="text"
+        placeholder="Nama"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
       <input
         type="number"
-        placeholder="Coins"
-        value={coins}
-        onChange={(e) => setCoins(Number(e.target.value))}
+        placeholder="Umur"
+        value={age}
+        onChange={(e) => setAge(e.target.value)}
       />
-      <button onClick={addPlayer}>Add Player</button>
+      <button onClick={addPlayer}>+ Tambah Pemain</button>
 
-      <ul>
-        {players.map((player) => (
-          <li key={player.id}>
-            {player.name} - {player.coins} coins
-            <button onClick={() => updateCoins(player.id, player.coins + 10)}>
-              +10
-            </button>
-            <button onClick={() => updateCoins(player.id, player.coins - 10)}>
-              -10
-            </button>
-          </li>
-        ))}
-      </ul>
+      <hr />
+
+      <h2>Daftar Pemain</h2>
+      {players.map((p) => (
+        <div key={p.id} style={{ border: "1px solid #ccc", margin: "10px", padding: "10px" }}>
+          <h3>{p.name} ({p.age} th)</h3>
+          <p>Poin: {p.points}</p>
+
+          <input
+            type="text"
+            placeholder="Beli item..."
+            value={item}
+            onChange={(e) => setItem(e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="Harga"
+            value={points}
+            onChange={(e) => setPoints(Number(e.target.value))}
+          />
+          <button onClick={() => buyItem(p.id)}>Beli</button>
+
+          <ul>
+            {p.purchases.map((purchase, i) => (
+              <li key={i}>
+                {purchase.item} - {purchase.cost} poin
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 }
